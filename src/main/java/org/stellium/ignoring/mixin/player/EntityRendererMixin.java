@@ -1,47 +1,20 @@
 package org.stellium.ignoring.mixin.player;
-
-import net.minecraft.client.render.command.LabelCommandRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.stellium.ignoring.config.IgnoringConfig;
-import org.stellium.ignoring.entity.EntityCaptures;
-
-import static org.stellium.ignoring.util.ArgbUtils.swapAlpha;
-
-@Mixin(LabelCommandRenderer.Commands.class)
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.stellium.ignoring.render.TransparencyLayers;
+import org.stellium.ignoring.util.ArgbUtils;
+@Mixin(SubmitNodeCollection.class)
 public class EntityRendererMixin {
-
-    @ModifyArg(
-        method = "add(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/util/math/Vec3d;ILnet/minecraft/text/Text;ZIDLnet/minecraft/client/render/state/CameraRenderState;)V",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/render/command/OrderedRenderCommandQueueImpl$LabelCommand;<init>(Lorg/joml/Matrix4f;FFLnet/minecraft/text/Text;IIID)V"
-        ),
-        index = 5
-    )
-    private int ignoring$adjustLabelColor(int color) {
-        if (EntityCaptures.MAIN.getEntity() == null) {
-            return color;
-        }
-
-        return swapAlpha(color, IgnoringConfig.get().transparency);
+    @ModifyVariable(method = "nameTag", at = @At("HEAD"), argsOnly = true, index = 5)
+    private static int ignoring$nameAlpha(int color) {
+        int alpha = TransparencyLayers.targetAlpha();
+        return alpha < 0 ? color : ArgbUtils.swapAlpha(color, alpha);
     }
-
-    @ModifyArg(
-        method = "add(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/util/math/Vec3d;ILnet/minecraft/text/Text;ZIDLnet/minecraft/client/render/state/CameraRenderState;)V",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/render/command/OrderedRenderCommandQueueImpl$LabelCommand;<init>(Lorg/joml/Matrix4f;FFLnet/minecraft/text/Text;IIID)V"
-        ),
-        index = 6
-    )
-    private int ignoring$adjustLabelBackgroundColor(int backgroundColor) {
-        if (EntityCaptures.MAIN.getEntity() == null) {
-            return backgroundColor;
-        }
-
-        return swapAlpha(backgroundColor, IgnoringConfig.get().transparency);
+    @ModifyVariable(method = "nameTag", at = @At("HEAD"), argsOnly = true, index = 6)
+    private static int ignoring$backgroundAlpha(int color) {
+        int alpha = TransparencyLayers.targetAlpha();
+        return alpha < 0 || color == 0 ? color : ArgbUtils.swapAlpha(color, alpha);
     }
-
 }

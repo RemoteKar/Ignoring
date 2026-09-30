@@ -2,31 +2,25 @@
   "required": true,
   "minVersion": "0.8",
   "package": "org.stellium.ignoring.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "client": [
     "ModelPartMixin",
     "accessor.RenderLayerAccessor",
     "accessor.RenderSetupAccessor",
     "accessor.RenderSetupTextureSpecAccessor",
-    "armor.EquipmentRendererMixin",
     "fixes.GameRendererMixin",
     "hud.PlayerListHudInvoker",
     "hud.PlayerTabOverlayMixin",
-    "item.ItemRendererMixin",
-    "layers.RenderLayerMixin",
-    "layers.TexturedRenderLayersMixin",
     "network.ClientPlayNetworkHandlerMixin",
     "player.CapeFeatureRendererMixin",
     "player.EntityRenderDispatcherMixin",
     "player.EntityRendererMixin",
-    "player.LivingEntityRendererMixin",
     "render.BatchingRenderCommandQueueMixin",
-    "render.ItemCommandRendererMixin"
+    "render.ItemCommandRendererMixin",
+    "entity.LivingEntityMixin",
+    "render.ItemSubmitMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "mixins": [
-    "entity.LivingEntityMixin"
-  ]
+  }
 }

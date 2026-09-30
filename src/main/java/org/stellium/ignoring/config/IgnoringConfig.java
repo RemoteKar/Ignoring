@@ -1,132 +1,117 @@
 package org.stellium.ignoring.config;
 
-import me.shedaniel.autoconfig.AutoConfig;
-import me.shedaniel.autoconfig.ConfigData;
-import me.shedaniel.autoconfig.annotation.Config;
-import me.shedaniel.autoconfig.annotation.ConfigEntry;
-import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-
 import java.util.ArrayList;
 import java.util.List;
+import me.shedaniel.autoconfig.AutoConfig;
+import me.shedaniel.autoconfig.ConfigData;
+import me.shedaniel.autoconfig.ConfigData.ValidationException;
+import me.shedaniel.autoconfig.annotation.Config;
+import me.shedaniel.autoconfig.annotation.ConfigEntry.BoundedDiscrete;
+import me.shedaniel.autoconfig.annotation.ConfigEntry.Gui.Tooltip;
+import me.shedaniel.autoconfig.annotation.ConfigEntry.Gui.TransitiveObject;
+import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
 @Config(name = "ignoring")
 public class IgnoringConfig implements ConfigData {
+   private static boolean initialized;
+   @Tooltip
+   @TransitiveObject
+   public boolean ignoreChat = false;
+   @Tooltip
+   @TransitiveObject
+   public boolean ignoreRender = false;
+   @Tooltip
+   @TransitiveObject
+   public boolean ignoreTablist = false;
+   @Tooltip(count = 2)
+   @TransitiveObject
+   public boolean interactionThroughIgnoredPlayer = false;
+   @Tooltip
+   @TransitiveObject
+   public boolean ignoreEveryone = false;
+   @Tooltip
+   @TransitiveObject
+   public boolean ignoreSpecialCharacter = false;
+   @Tooltip
+   @BoundedDiscrete(min = 0L, max = 255L)
+   public int transparency = 255;
+   @Tooltip
+   public List<String> ignoredPlayerList = new ArrayList<>();
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.Gui.TransitiveObject
-    public boolean ignoreChat = false;
+   public IgnoringConfig() {
+      if (this.ignoredPlayerList.isEmpty()) {
+         this.ignoredPlayerList.add("Insert name");
+      }
+   }
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.Gui.TransitiveObject
-    public boolean ignoreRender = false;
+   static void validate(IgnoringConfig config) {
+      if (config.ignoredPlayerList != null) {
+         config.ignoredPlayerList.removeIf(name -> name == null || name.isBlank());
+      }
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.Gui.TransitiveObject
-    public boolean ignoreTablist = false;
+      if (config.transparency < 0) {
+         config.transparency = 0;
+      }
 
-    @ConfigEntry.Gui.Tooltip(count = 2)
-    @ConfigEntry.Gui.TransitiveObject
-    public boolean interactionThroughIgnoredPlayer = false;
+      if (config.transparency > 255) {
+         config.transparency = 255;
+      }
+   }
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.Gui.TransitiveObject
-    public boolean ignoreEveryone = false;
+   public static void init() {
+      if (!initialized) { AutoConfig.register(IgnoringConfig.class, GsonConfigSerializer::new); initialized = true; }
+   }
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.Gui.TransitiveObject
-    public boolean ignoreSpecialCharacter = false;
+   public boolean shouldIgnorePlayer(Entity entity) {
+      if (entity instanceof Player player) {
+         return this.ignoreEveryone
+            ? !this.isLocalPlayer(player)
+            : this.isListedName(player.getScoreboardName())
+               || this.isListedName(player.getName().getString())
+               || this.isListedName(player.getGameProfile().name());
+      } else {
+         return false;
+      }
+   }
 
+   public boolean isPlayerIgnored(String playerName) {
+      if (playerName == null || playerName.isBlank()) {
+         return false;
+      } else {
+         return this.ignoreEveryone ? !this.isLocalPlayerName(playerName) : this.ignoredPlayerList.contains(playerName);
+      }
+   }
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 255)
-    public int transparency = 255;
+   private boolean isListedName(String value) {
+      return value != null && this.ignoredPlayerList.contains(value);
+   }
 
-    @ConfigEntry.Gui.Tooltip
-    public List<String> ignoredPlayerList = new ArrayList<>();
+   private boolean isLocalPlayer(Player player) {
+      Minecraft client = Minecraft.getInstance();
+      return client != null && client.player != null && client.player.getUUID().equals(player.getUUID());
+   }
 
+   private boolean isLocalPlayerName(String playerName) {
+      Minecraft client = Minecraft.getInstance();
+      if (client == null || client.player == null) {
+         return false;
+      } else if (playerName.equals(client.player.getScoreboardName())) {
+         return true;
+      } else {
+         return playerName.equals(client.player.getGameProfile().name()) ? true : playerName.equals(client.player.getName().getString());
+      }
+   }
 
+   public static IgnoringConfig get() {
+      IgnoringConfig config = (IgnoringConfig)AutoConfig.getConfigHolder(IgnoringConfig.class).getConfig();
+      validate(config);
+      return config;
+   }
 
-    public IgnoringConfig() {
-        if (ignoredPlayerList.isEmpty()) {
-            ignoredPlayerList.add("Insert name");
-        }
-    }
-
-    static void validate(IgnoringConfig config) {
-        if (config.ignoredPlayerList != null) {
-            config.ignoredPlayerList.removeIf(name -> name == null || name.isBlank());
-        }
-        if (config.transparency < 0) config.transparency = 0;
-        if (config.transparency > 255) config.transparency = 255;
-    }
-
-    public static void init() {
-        AutoConfig.register(IgnoringConfig.class, GsonConfigSerializer::new);
-    }
-
-    public boolean shouldIgnorePlayer(Entity entity) {
-        if (!(entity instanceof PlayerEntity player)) {
-            return false;
-        }
-
-        if (ignoreEveryone) {
-            return !isLocalPlayer(player);
-        }
-
-        return isListedName(player.getNameForScoreboard())
-            || isListedName(player.getName().getString())
-            || isListedName(player.getGameProfile().name());
-    }
-
-    public boolean isPlayerIgnored(String playerName) {
-        if (playerName == null || playerName.isBlank()) {
-            return false;
-        }
-
-        if (ignoreEveryone) {
-            return !isLocalPlayerName(playerName);
-        }
-
-        return ignoredPlayerList.contains(playerName);
-    }
-
-    private boolean isListedName(String value) {
-        return value != null && ignoredPlayerList.contains(value);
-    }
-
-    private boolean isLocalPlayer(PlayerEntity player) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client != null && client.player != null && client.player.getUuid().equals(player.getUuid());
-    }
-
-    private boolean isLocalPlayerName(String playerName) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.player == null) {
-            return false;
-        }
-
-        if (playerName.equals(client.player.getNameForScoreboard())) {
-            return true;
-        }
-
-        if (playerName.equals(client.player.getGameProfile().name())) {
-            return true;
-        }
-
-        return playerName.equals(client.player.getName().getString());
-    }
-
-    public static IgnoringConfig get() {
-        IgnoringConfig config = AutoConfig.getConfigHolder(IgnoringConfig.class).getConfig();
-        validate(config);
-        return config;
-    }
-
-    @Override
-    public void validatePostLoad() throws ValidationException {
-        validate(this);
-    }
+   public void validatePostLoad() throws ValidationException {
+      validate(this);
+   }
 }

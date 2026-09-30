@@ -1,92 +1,66 @@
 package org.stellium.ignoring.render;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.stellium.ignoring.config.IgnoringConfig;
 import org.stellium.ignoring.util.ArgbUtils;
 
-/*
- * This file is part of Transparent-Entities(https://github.com/LopyMine/Transparent-Entities)
- * Copyright (C) LopyMine(https://github.com/LopyMine)
- *
- * Modified by stellium1 in Ignoring(https://github.com/stellium1/Ignoring).
- * Licensed under the GNU Lesser General Public License v3.0
-*/
 public class TransparencyManager {
+   public static int getTranslucentArgb(Entity entity, int original) {
+      if (!IgnoringConfig.get().ignoreRender) {
+         return original;
+      } else {
+         Minecraft client = Minecraft.getInstance();
+         LocalPlayer player = client.player;
+         ClientLevel world = client.level;
+         Vec3 cameraPos = client.gameRenderer.mainCamera().position();
+         Vec3 entityPos = entity.position();
+         if (player == null || world == null) {
+            return original;
+         } else if (player.equals(entity)) {
+            return getColorForYourself(original);
+         } else {
+            return entity.isInvisibleTo(player) ? original : ArgbUtils.swapAlpha(original, getAlpha(cameraPos, entityPos));
+         }
+      }
+   }
 
-	public static int getTranslucentArgb(Entity entity, int original) {
-		if (!IgnoringConfig.get().ignoreRender) {
-			return original;
-		}
+   private static int getAlpha(Vec3 cameraPos, Vec3 entityPos) {
+      float hidingActivationDistance = 4.0F;
+      float fullHidingDistance = 2.8F;
+      float minHidingValue = 0.2F;
+      float distance = calculateDistance(cameraPos, entityPos);
+      if (hidingActivationDistance <= 0.0F) {
+         return 255;
+      } else {
+         float a = hidingActivationDistance - fullHidingDistance;
+         float b = distance - fullHidingDistance;
+         if (a <= 0.0F || b <= 0.0F) {
+            return (int)(minHidingValue * 255.0F);
+         } else {
+            return b >= a ? 255 : (int)(Mth.clamp(minHidingValue + (1.0F - minHidingValue) * (b / a), 0.0F, 1.0F) * 255.0F);
+         }
+      }
+   }
 
-		MinecraftClient client = MinecraftClient.getInstance();
-		ClientPlayerEntity player = client.player;
-		ClientWorld world = client.world;
-		Vec3d cameraPos = client.gameRenderer.getCamera().getCameraPos();
-		Vec3d entityPos = entity.getEntityPos();
+   private static int getColorForYourself(int original) {
+      return FabricLoader.getInstance().isDevelopmentEnvironment() ? ArgbUtils.swapAlpha(original, 51) : original;
+   }
 
-		if (player == null || world == null) {
-			return original;
-		}
+   public static float calculateDistance(Vec3 cameraPos, Vec3 entityPos) {
+      float f = (float)(cameraPos.x() - entityPos.x());
+      float g = (float)(cameraPos.y() - entityPos.y());
+      float h = (float)(cameraPos.z() - entityPos.z());
+      return Mth.sqrt(f * f + g * g + h * h);
+   }
 
-		if (player.equals(entity)) {
-			return getColorForYourself(original);
-		}
-
-		if (entity.isInvisibleTo(player)) {
-			return original;
-		}
-
-		return ArgbUtils.swapAlpha(original, getAlpha(cameraPos, entityPos));
-	}
-
-	private static int getAlpha(Vec3d cameraPos, Vec3d entityPos) {
-		float hidingActivationDistance = 4.0F;
-		float fullHidingDistance = 2.8F;
-		float minHidingValue = 0.2F;
-		float distance = calculateDistance(cameraPos, entityPos);
-
-		if (hidingActivationDistance <= 0F) {
-			return 255;
-		}
-
-		float a = hidingActivationDistance - fullHidingDistance;
-		float b = distance - fullHidingDistance;
-
-		if (a <= 0F || b <= 0F) {
-			return (int) (minHidingValue * 255F);
-		}
-
-		if (b >= a) {
-			return 255;
-		}
-
-		return (int) (MathHelper.clamp((minHidingValue + ((1F - minHidingValue) * (b / a))), 0F, 1F) * 255F);
-	}
-
-	private static int getColorForYourself(int original) {
-		if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-			return ArgbUtils.swapAlpha(original, (int) (255F * 0.2F));
-		}
-		return original;
-	}
-
-	public static float calculateDistance(Vec3d cameraPos, Vec3d entityPos) {
-		float f = (float)(cameraPos.getX() - entityPos.getX());
-		float g = (float)(cameraPos.getY() - entityPos.getY());
-		float h = (float)(cameraPos.getZ() - entityPos.getZ());
-		return MathHelper.sqrt(f * f + g * g + h * h);
-	}
-
-
-	public static boolean canRenderTransparencyShadow(Entity entity) {
-		IgnoringConfig config = IgnoringConfig.get();
-		return config.ignoreRender && config.shouldIgnorePlayer(entity);
-
-	}
+   public static boolean canRenderTransparencyShadow(Entity entity) {
+      IgnoringConfig config = IgnoringConfig.get();
+      return config.ignoreRender && config.shouldIgnorePlayer(entity);
+   }
 }

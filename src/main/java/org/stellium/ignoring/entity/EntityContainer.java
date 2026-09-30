@@ -1,32 +1,29 @@
 package org.stellium.ignoring.entity;
 
-import lombok.*;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
-import org.jetbrains.annotations.Nullable;
 
-@Getter
-@Setter
 public class EntityContainer {
+   
+   private Entity entity = null;
+   private boolean enabled = true;
 
-	@Nullable
-	private Entity entity;
-	private boolean enabled;
+   public void setEntity( Entity entity) {
+      if (this.isEnabled()) {
+         this.entity = entity;
+      }
+   }
 
-	public EntityContainer() {
-		this.entity = null;
-		this.enabled = true;
-	}
+   
+   public Entity getEntity() {
+      return this.isEnabled() ? this.entity : null;
+   }
 
-	public void setEntity(@Nullable Entity entity) {
-		if (!this.isEnabled()) {
-			return;
-		}
-		this.entity = entity;
-	}
+   public boolean isEnabled() {
+      return this.enabled;
+   }
 
-	@Nullable
-	public Entity getEntity() {
-		return this.isEnabled() ? this.entity : null;
-	}
+   public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+   }
 }
