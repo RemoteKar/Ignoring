@@ -5,9 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -16,25 +14,22 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState.ShadowPiece;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.stellium.ignoring.config.IgnoringConfig;
+import org.stellium.ignoring.render.IgnoringStateEntity;
 import org.stellium.ignoring.render.TransparencyManager;
 import org.stellium.ignoring.render.TransparencyRenderer;
 
 @Mixin(EntityRenderDispatcher.class)
 public class EntityRenderDispatcherMixin {
-   @Unique
-   private static final ThreadLocal<Map<EntityRenderState, Entity>> IGNORING$STATE_ENTITY = ThreadLocal.withInitial(IdentityHashMap::new);
-
    @Inject(method = "extractEntity(Lnet/minecraft/world/entity/Entity;F)Lnet/minecraft/client/renderer/entity/state/EntityRenderState;", at = @At("RETURN"))
    private <E extends Entity> void ignoring$captureEntity(E entity, float tickDelta, CallbackInfoReturnable<EntityRenderState> cir) {
       EntityRenderState state = (EntityRenderState)cir.getReturnValue();
       if (state != null) {
-         IGNORING$STATE_ENTITY.get().put(state, entity);
+         ((IgnoringStateEntity)state).ignoring$setEntity(entity);
       }
    }
 
@@ -53,7 +48,7 @@ public class EntityRenderDispatcherMixin {
       CameraRenderState cameraState,
       Operation<Void> original
    ) {
-      Entity entity = IGNORING$STATE_ENTITY.get().get(state);
+      Entity entity = ((IgnoringStateEntity)state).ignoring$entity();
       if (entity == null) {
          original.call(new Object[]{instance, state, matrices, commandQueue, cameraState});
       } else {
@@ -76,7 +71,7 @@ public class EntityRenderDispatcherMixin {
       Operation<Void> original,
       @Local(argsOnly = true) EntityRenderState state
    ) {
-      Entity entity = IGNORING$STATE_ENTITY.get().get(state);
+      Entity entity = ((IgnoringStateEntity)state).ignoring$entity();
       if (entity != null && TransparencyManager.canRenderTransparencyShadow(entity)) {
          float alpha = IgnoringConfig.get().transparency / 255.0F;
          List<ShadowPiece> adjusted = new ArrayList<>(shadowPieces.size());
@@ -105,6 +100,6 @@ public class EntityRenderDispatcherMixin {
       SubmitNodeCollector commandQueue,
       CallbackInfo ci
    ) {
-      IGNORING$STATE_ENTITY.get().remove(state);
+      ((IgnoringStateEntity)state).ignoring$setEntity(null);
    }
 }

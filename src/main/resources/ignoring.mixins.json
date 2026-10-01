@@ -18,7 +18,8 @@
     "render.BatchingRenderCommandQueueMixin",
     "render.ItemCommandRendererMixin",
     "entity.LivingEntityMixin",
-    "render.ItemSubmitMixin"
+    "render.ItemSubmitMixin",
+    "render.EntityRenderStateMixin"
   ],
   "injectors": {
     "defaultRequire": 1
